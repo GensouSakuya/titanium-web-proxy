@@ -185,8 +185,8 @@ public abstract class SessionEventArgsBase : ProxyEventArgsBase, IDisposable
     ~SessionEventArgsBase()
     {
 #if DEBUG
-            // Finalizer should not be called
-            System.Diagnostics.Debugger.Break();
+        // Finalizer should not be called
+        System.Diagnostics.Debugger.Break();
 #endif
 
         Dispose(false);
@@ -197,10 +197,12 @@ public abstract class SessionEventArgsBase : ProxyEventArgsBase, IDisposable
     /// </summary>
     public event EventHandler<DataEventArgs>? DataSent;
 
+    public event Func<object, DataEventArgs, DataEventArgs>? DataSentEdit;
     /// <summary>
     ///     Fired when data is received within this session from client/server.
     /// </summary>
     public event EventHandler<DataEventArgs>? DataReceived;
+    public event Func<object, DataEventArgs, DataEventArgs>? DataReceivedEdit;
 
     internal void OnDataSent(byte[] buffer, int offset, int count)
     {
@@ -214,6 +216,20 @@ public abstract class SessionEventArgsBase : ProxyEventArgsBase, IDisposable
         }
     }
 
+    internal DataEventArgs? OnDataSentEdit(byte[] buffer, int offset, int count)
+    {
+        try
+        {
+            var args = new DataEventArgs(buffer, offset, count);
+            return DataSentEdit?.Invoke(this, args) ?? args;
+        }
+        catch (Exception ex)
+        {
+            OnException(new Exception("Exception thrown in user event DataSentEdit", ex));
+            return null;
+        }
+    }
+
     internal void OnDataReceived(byte[] buffer, int offset, int count)
     {
         try
@@ -223,6 +239,20 @@ public abstract class SessionEventArgsBase : ProxyEventArgsBase, IDisposable
         catch (Exception ex)
         {
             OnException(new Exception("Exception thrown in user event", ex));
+        }
+    }
+
+    internal DataEventArgs? OnDataReceivedEdit(byte[] buffer, int offset, int count)
+    {
+        try
+        {
+            var args = new DataEventArgs(buffer, offset, count);
+            return DataReceivedEdit?.Invoke(this, args) ?? args;
+        }
+        catch (Exception ex)
+        {
+            OnException(new Exception("Exception thrown in user event DataReceivedEdit", ex));
+            return null;
         }
     }
 

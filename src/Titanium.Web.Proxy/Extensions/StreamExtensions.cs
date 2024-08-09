@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Titanium.Web.Proxy.StreamExtended.BufferPool;
+using Titanium.Web.Proxy.StreamExtended.Network;
 
 namespace Titanium.Web.Proxy.Extensions;
 
@@ -33,7 +34,7 @@ internal static class StreamExtensions
     /// <param name="bufferPool"></param>
     /// <param name="cancellationToken"></param>
     internal static async Task CopyToAsync(this Stream input, Stream output, Action<byte[], int, int>? onCopy,
-        IBufferPool bufferPool, CancellationToken cancellationToken)
+        IBufferPool bufferPool, CancellationToken cancellationToken, Func<byte[], int, int, DataEventArgs>? onEdit = null)
     {
         var buffer = bufferPool.GetBuffer();
         try
@@ -47,8 +48,17 @@ internal static class StreamExtensions
                 int bytesRead;
                 if ((bytesRead = num) != 0 && !cancellationToken.IsCancellationRequested)
                 {
-                    await output.WriteAsync(buffer, 0, bytesRead, CancellationToken.None);
-                    onCopy?.Invoke(buffer, 0, bytesRead);
+                    if (onEdit != null)
+                    {
+                        var res = onEdit.Invoke(buffer, 0, bytesRead);
+                        await output.WriteAsync(res.Buffer, res.Offset, res.Count, CancellationToken.None);
+                        onCopy?.Invoke(res.Buffer, res.Offset, res.Count);
+                    }
+                    else
+                    {
+                        await output.WriteAsync(buffer, 0, bytesRead, CancellationToken.None);
+                        onCopy?.Invoke(buffer, 0, bytesRead);
+                    }
                 }
                 else
                 {

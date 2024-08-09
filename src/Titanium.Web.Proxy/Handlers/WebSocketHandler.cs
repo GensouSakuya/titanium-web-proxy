@@ -34,6 +34,6 @@ public partial class ProxyServer
         if (!args.HttpClient.Response.Locked) await OnBeforeResponse(args);
 
         await TcpHelper.SendRaw(clientStream, serverConnection.Stream, BufferPool,
-            args.OnDataSent, args.OnDataReceived, cancellationTokenSource, ExceptionFunc);
+            args.OnDataSent, args.OnDataReceived, cancellationTokenSource, ExceptionFunc, args.OnDataSentEdit, args.OnDataReceivedEdit);
     }
 }

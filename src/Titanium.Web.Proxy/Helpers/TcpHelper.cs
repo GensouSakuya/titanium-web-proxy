@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Titanium.Web.Proxy.Extensions;
 using Titanium.Web.Proxy.StreamExtended.BufferPool;
+using Titanium.Web.Proxy.StreamExtended.Network;
 
 namespace Titanium.Web.Proxy.Helpers;
 
@@ -93,13 +94,13 @@ internal class TcpHelper
     /// <returns></returns>
     private static async Task SendRawTap(Stream clientStream, Stream serverStream, IBufferPool bufferPool,
         Action<byte[], int, int>? onDataSend, Action<byte[], int, int>? onDataReceive,
-        CancellationTokenSource cancellationTokenSource)
+        CancellationTokenSource cancellationTokenSource, Func<byte[], int, int, DataEventArgs>? onSendEdit = null, Func<byte[], int, int, DataEventArgs>? onReceiveEdit = null)
     {
         // Now async relay all server=>client & client=>server data
         var sendRelay =
-            clientStream.CopyToAsync(serverStream, onDataSend, bufferPool, cancellationTokenSource.Token);
+            clientStream.CopyToAsync(serverStream, onDataSend, bufferPool, cancellationTokenSource.Token, onSendEdit);
         var receiveRelay =
-            serverStream.CopyToAsync(clientStream, onDataReceive, bufferPool, cancellationTokenSource.Token);
+            serverStream.CopyToAsync(clientStream, onDataReceive, bufferPool, cancellationTokenSource.Token, onReceiveEdit);
 
         await Task.WhenAny(sendRelay, receiveRelay);
         cancellationTokenSource.Cancel();
@@ -123,10 +124,10 @@ internal class TcpHelper
     internal static Task SendRaw(Stream clientStream, Stream serverStream, IBufferPool bufferPool,
         Action<byte[], int, int>? onDataSend, Action<byte[], int, int>? onDataReceive,
         CancellationTokenSource cancellationTokenSource,
-        ExceptionHandler? exceptionFunc)
+        ExceptionHandler? exceptionFunc, Func<byte[], int, int, DataEventArgs>? onSendEdit = null, Func<byte[], int, int, DataEventArgs>? onReceiveEdit = null)
     {
         // todo: fix APM mode
         return SendRawTap(clientStream, serverStream, bufferPool, onDataSend, onDataReceive,
-            cancellationTokenSource);
+            cancellationTokenSource, onSendEdit: onSendEdit, onReceiveEdit: onReceiveEdit);
     }
 }
